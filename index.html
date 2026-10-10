@@ -41,8 +41,9 @@ const dh=s=>new Date(s).toLocaleDateString("pt-BR",{day:"2-digit",month:"2-digit
 const dc=s=>{const d=new Date(s+"T12:00:00");return d.toLocaleDateString("pt-BR",{weekday:"short"}).replace(".","")+" "+s.slice(8,10)+"/"+s.slice(5,7)};
 const leg=ss=>`<div class="leg">`+ss.map(s=>`<span><i style="background:${s.cor}${s.tr?";opacity:.55":""}"></i>${s.label}</span>`).join("")+`</div>`;
 function eixo(mx){let st=Math.pow(10,Math.floor(Math.log10(mx/4)));for(const k of[1,2,2.5,5,10])if(mx/(st*k)<=5){st*=k;break}return{max:Math.ceil(mx/st)*st,step:st}}
+const larg=el=>Math.max(300,Math.min(680,Math.round(el.clientWidth||680)));
 function barras(el,labels,series,f,rodape){
- const W=680,H=rodape?272:252,L=86,B=rodape?48:30,T=8,n=labels.length,k=series.length;
+ const W=larg(el),H=rodape?272:252,L=86,B=rodape?48:30,T=8,n=labels.length,k=series.length;
  const {max,step}=eixo(Math.max(...series.flatMap(s=>s.data).filter(v=>v!=null)));
  const y=v=>T+(H-T-B)*(1-v/max), gw=(W-L)/n, bw=Math.max(8,Math.min(24,(gw-12)/k-2));
  let g="";
@@ -50,17 +51,18 @@ function barras(el,labels,series,f,rodape){
  labels.forEach((lb,i)=>{const cx=L+gw*i+gw/2, x0=cx-(bw*k+2*(k-1))/2;
   series.forEach((s,j)=>{const v=s.data[i];if(v==null)return;const x=x0+j*(bw+2),yy=y(v);
    g+=`<path d="M${x},${y(0)}V${yy+4}q0,-4 4,-4h${bw-8}q4,0 4,4V${y(0)}Z" fill="${s.cor}"${s.tr?' opacity=".55"':""}><title>${lb} · ${s.label}: ${f(v)}${rodape&&rodape[i]?" · "+rodape[i]:""}</title></path>`;});
-  g+=`<text x="${cx}" y="${H-B+18}" text-anchor="middle" class="tk">${lb}</text>`;
-  if(rodape&&rodape[i])g+=`<text x="${cx}" y="${H-B+36}" text-anchor="middle" class="tk2">${rodape[i]}</text>`;});
+  const pulo=Math.ceil(64/gw), mostra=i%pulo===0;
+  if(mostra)g+=`<text x="${cx}" y="${H-B+18}" text-anchor="middle" class="tk">${lb}</text>`;
+  if(mostra&&rodape&&rodape[i])g+=`<text x="${cx}" y="${H-B+36}" text-anchor="middle" class="tk2">${rodape[i]}</text>`;});
  el.innerHTML=leg(series)+`<svg viewBox="0 0 ${W} ${H}" role="img">${g}</svg>`;}
 function linhas(el,labels,series,f){
- const W=680,H=240,L=86,B=30,T=10,n=labels.length;
+ const W=larg(el),H=240,L=86,B=30,T=10,n=labels.length;
  const vs=series.flatMap(s=>s.data).filter(v=>v!=null);let mn=Math.min(...vs),mx=Math.max(...vs);
  const pad=Math.max((mx-mn)*.15,mx*.03);mn-=pad;mx+=pad;
  const y=v=>T+(H-T-B)*(1-(v-mn)/(mx-mn)), x=i=>n<2?L+(W-L)/2:L+14+(W-L-28)*i/(n-1);
  let g="";
  for(let t=0;t<=4;t++){const v=mn+(mx-mn)*t/4;g+=`<line x1="${L}" x2="${W}" y1="${y(v)}" y2="${y(v)}" class="gl"/><text x="${L-8}" y="${y(v)+4}" text-anchor="end" class="tk">${f(v)}</text>`;}
- const mostra=n<=4?labels.map((_,i)=>i):[0,Math.floor((n-1)/2),n-1];
+ const mostra=n<=(W<500?2:4)?labels.map((_,i)=>i):(W<500?[0,n-1]:[0,Math.floor((n-1)/2),n-1]);
  mostra.forEach(i=>g+=`<text x="${x(i)}" y="${H-B+18}" text-anchor="middle" class="tk">${labels[i]}</text>`);
  series.forEach(s=>{const pts=s.data.map((v,i)=>v==null?null:[x(i),y(v)]).filter(Boolean);
   if(pts.length>1)g+=`<path d="M${pts.map(p=>p.join(",")).join("L")}" fill="none" stroke="${s.cor}" stroke-width="2" stroke-linejoin="round" stroke-linecap="round"${s.tr?' stroke-dasharray="6 4" opacity=".7"':""}/>`;
